@@ -6,3 +6,9 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+dotenv = "0.15.0"
+tokio = {version = "1.38.0", features = ["rt", "macros", "rt-multi-thread"]}
+twilight = "0.15.1"
+twilight-cache = "0.0.0"
+twilight-gateway = "0.15.4"
+twilight-http = "0.15.4"
