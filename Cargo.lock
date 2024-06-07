@@ -1477,4 +1477,5 @@ dependencies = [
  "twilight-cache",
  "twilight-gateway",
  "twilight-http",
+ "twilight-model",
 ]
