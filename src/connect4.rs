@@ -52,28 +52,22 @@ impl Board {
 
 pub async fn connect_4(
 	ids: (Id<UserMarker>, Id<UserMarker>),
-	chanel: Id<ChannelMarker>,
+	channel: Id<ChannelMarker>,
 	ctx: Arc<Context>,
 ) -> Result<(), Box<dyn Error + Send + Sync>> {
 	let message = ctx
 		.standby
-		.wait_for_message(chanel, move |message: &MessageCreate| {
+		.wait_for_message(channel, move |message: &MessageCreate| {
 			message.author.id == ids.1 && message.content.to_lowercase().contains("accept")
 		})
 		.await;
 	if let Err(_error) = message {
-		ctx.client
-			.create_message(chanel)
-			.content("Game declined!!!")?
-			.await?;
+		ctx.message(channel, "Game declined!!!").await?;
 		return Ok(());
 	}
 
 	let mut board = Board::new(ids.0, ids.1);
-	ctx.client
-		.create_message(chanel)
-		.content(&print_board(&board))?
-		.await?;
+	ctx.message(channel, print_board(&board)).await?;
 	loop {
 		let cur_player = match board.turn {
 			Turn::Player1 => board.players.0,
@@ -81,19 +75,15 @@ pub async fn connect_4(
 		};
 		if let Ok(message) = ctx
 			.standby
-			.wait_for_message(chanel, move |message: &MessageCreate| {
+			.wait_for_message(channel, move |message: &MessageCreate| {
 				message.author.id == cur_player
 			})
 			.await
 		{
-			ctx.client
-				.create_message(chanel)
-				.content(&connect_4_turn(&message.content, &mut board))?
+			ctx.message(channel, connect_4_turn(&message.content, &mut board))
 				.await?;
 			if connect_4_check(&board) {
-				ctx.client
-					.create_message(chanel)
-					.content(&format!("decisive victory for <@{}>", cur_player))?
+				ctx.message(channel, format!("decisive victory for <@{}>", cur_player))
 					.await?;
 				break;
 			}

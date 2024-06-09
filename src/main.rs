@@ -12,6 +12,7 @@ use twilight_standby::Standby;
 use utils::Context;
 
 mod connect4;
+mod result;
 mod utils;
 
 #[tokio::main]
@@ -59,9 +60,7 @@ async fn handle_event(event: Event, ctx: Arc<Context>) -> Result<(), Box<dyn Err
 	match event {
 		Event::MessageCreate(msg) if msg.content.to_lowercase().contains("hamis start") => {
 			if msg.mentions.is_empty() {
-				ctx.client
-					.create_message(msg.channel_id)
-					.content("You can't play alone dumbass")?
+				ctx.message(msg.channel_id, "You can't play alone dumbass")
 					.await?;
 				return Ok(());
 			}
@@ -78,7 +77,7 @@ async fn handle_event(event: Event, ctx: Arc<Context>) -> Result<(), Box<dyn Err
 }
 
 async fn score(
-	chanel: Id<ChannelMarker>,
+	channel: Id<ChannelMarker>,
 	id: Id<UserMarker>,
 	ctx: Arc<Context>,
 ) -> Result<(), Box<dyn Error + Send + Sync>> {
@@ -99,9 +98,7 @@ async fn score(
 		}
 	}
 
-	ctx.client
-		.create_message(chanel)
-		.content(&format!("{}", score))?
+	ctx.message(channel, format!("Your score is: {}", score))
 		.await?;
 
 	Ok(())
