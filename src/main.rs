@@ -1,5 +1,6 @@
 use dotenv::dotenv;
 use regex::Regex;
+use sqlite::{ConnectionThreadSafe, State};
 use std::{env, error::Error, sync::Arc};
 use twilight_gateway::{Event, Intents, Shard, ShardId};
 use twilight_http::Client;
@@ -16,6 +17,11 @@ use twilight_standby::Standby;
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
 	dotenv()?;
 	let token = env::var("DISCORD_TOKEN")?;
+	let sql_path = env::var("DATA")?;
+
+	let connection = Arc::new(sqlite::Connection::open_thread_safe(sql_path).unwrap());
+	let query = "CREATE TABLE IF NOT EXISTS scores (id INTEGER,score INTEGER)";
+	connection.execute(query)?;
 	let intents = Intents::GUILD_MESSAGES | Intents::MESSAGE_CONTENT;
 	let mut shard = Shard::new(ShardId::ONE, token.clone(), intents);
 
@@ -36,7 +42,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 			}
 		};
 		standby.process(&event);
-		tokio::spawn(handle_event(event, Arc::clone(&http), Arc::clone(&standby)));
+		tokio::spawn(handle_event(
+			event,
+			Arc::clone(&http),
+			Arc::clone(&standby),
+			Arc::clone(&connection),
+		));
 	}
 
 	Ok(())
@@ -46,6 +57,7 @@ async fn handle_event(
 	event: Event,
 	http: Arc<Client>,
 	standby: Arc<Standby>,
+	connection: Arc<ConnectionThreadSafe>,
 ) -> Result<(), Box<dyn Error + Send + Sync>> {
 	match event {
 		Event::MessageCreate(msg) if msg.content.to_lowercase().contains("hamis start") => {
@@ -63,6 +75,15 @@ async fn handle_event(
 				http,
 			));
 		}
+		Event::MessageCreate(msg) if msg.content.to_lowercase().contains("hamis score") => {
+			tokio::spawn(score(
+				msg.channel_id,
+				http,
+				msg.author.id,
+				Arc::clone(&connection),
+			));
+		}
+
 		_ => {}
 	}
 	Ok(())
@@ -88,6 +109,36 @@ impl Board {
 			players: (initiator, pinged),
 		}
 	}
+}
+
+async fn score(
+	chanel: Id<ChannelMarker>,
+	http: Arc<Client>,
+	id: Id<UserMarker>,
+	connection: Arc<ConnectionThreadSafe>,
+) -> Result<(), Box<dyn Error + Send + Sync>> {
+	let mut score = 0;
+
+	{
+		let query = "SELECT * FROM scores WHERE id = ?";
+		let mut statement = connection.prepare(query)?;
+		statement.bind((1, id.into_nonzero().get() as i64))?;
+		if let Ok(State::Row) = statement.next() {
+			score = statement.read::<i64, _>("score")?;
+		} else {
+			let insert_query = "INSERT INTO scores VALUES (?,?)";
+			let mut statement = connection.prepare(insert_query)?;
+			statement.bind((1, id.into_nonzero().get() as i64))?;
+			statement.bind((2, 0))?;
+			statement.next()?;
+		}
+	}
+
+	http.create_message(chanel)
+		.content(&format!("{}", score))?
+		.await?;
+
+	Ok(())
 }
 
 async fn connect_4(
