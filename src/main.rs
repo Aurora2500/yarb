@@ -1,4 +1,4 @@
-use std::{env, error::Error, sync::Arc};
+use std::{env, sync::Arc};
 
 use dotenv::dotenv;
 use sqlite::State;
@@ -9,6 +9,8 @@ use twilight_model::id::{
 	Id,
 };
 use twilight_standby::Standby;
+
+use result::Result;
 use utils::Context;
 
 mod connect4;
@@ -16,7 +18,7 @@ mod result;
 mod utils;
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> Result {
 	dotenv()?;
 	let token = env::var("DISCORD_TOKEN")?;
 	let sql_path = env::var("DATA")?;
@@ -56,7 +58,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 	Ok(())
 }
 
-async fn handle_event(event: Event, ctx: Arc<Context>) -> Result<(), Box<dyn Error + Send + Sync>> {
+async fn handle_event(event: Event, ctx: Arc<Context>) -> Result {
 	match event {
 		Event::MessageCreate(msg) if msg.content.to_lowercase().contains("hamis start") => {
 			if msg.mentions.is_empty() {
@@ -76,11 +78,7 @@ async fn handle_event(event: Event, ctx: Arc<Context>) -> Result<(), Box<dyn Err
 	Ok(())
 }
 
-async fn score(
-	channel: Id<ChannelMarker>,
-	id: Id<UserMarker>,
-	ctx: Arc<Context>,
-) -> Result<(), Box<dyn Error + Send + Sync>> {
+async fn score(channel: Id<ChannelMarker>, id: Id<UserMarker>, ctx: Arc<Context>) -> Result {
 	let mut score = 0;
 
 	{
