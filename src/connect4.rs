@@ -19,9 +19,24 @@ enum Tile {
 	Empty,
 }
 
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+enum Turn {
+	Player1,
+	Player2,
+}
+
+impl Turn {
+	fn swap(&mut self) {
+		*self = match self {
+			Turn::Player1 => Turn::Player2,
+			Turn::Player2 => Turn::Player1,
+		}
+	}
+}
+
 struct Board {
 	tiles: [[Tile; 6]; 7],
-	turn: bool,
+	turn: Turn,
 	players: (Id<UserMarker>, Id<UserMarker>),
 }
 
@@ -29,7 +44,7 @@ impl Board {
 	fn new(initiator: Id<UserMarker>, pinged: Id<UserMarker>) -> Board {
 		Board {
 			tiles: [[Tile::Empty; 6]; 7],
-			turn: false,
+			turn: Turn::Player1,
 			players: (initiator, pinged),
 		}
 	}
@@ -60,10 +75,9 @@ pub async fn connect_4(
 		.content(&print_board(&board))?
 		.await?;
 	loop {
-		let cur_player = if board.turn {
-			board.players.1
-		} else {
-			board.players.0
+		let cur_player = match board.turn {
+			Turn::Player1 => board.players.0,
+			Turn::Player2 => board.players.1,
 		};
 		if let Ok(message) = ctx
 			.standby
@@ -98,12 +112,11 @@ fn connect_4_turn(string: &String, board: &mut Board) -> String {
 			let mut sucess = false;
 			for tile in board.tiles[(num - 1) as usize].iter_mut() {
 				if *tile == Tile::Empty {
-					if turn {
-						*tile = Tile::Player2;
-					} else {
-						*tile = Tile::Player1;
+					match turn {
+						Turn::Player1 => *tile = Tile::Player1,
+						Turn::Player2 => *tile = Tile::Player2,
 					}
-					board.turn = !board.turn;
+					board.turn.swap();
 					sucess = true;
 					break;
 				}
