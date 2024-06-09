@@ -154,6 +154,34 @@ fn connect_4_check(board: &Board) -> bool {
 		}
 	}
 
+	// diagonals
+	// positive slope
+
+	for colum in 0..4 {
+		for row in 0..3 {
+			if board.tiles[colum][row] == board.tiles[colum + 1][row + 1]
+				&& board.tiles[colum][row] == board.tiles[colum + 2][row + 2]
+				&& board.tiles[colum][row] == board.tiles[colum + 3][row + 3]
+				&& board.tiles[colum][row] != Tile::Empty
+			{
+				return true;
+			}
+		}
+	}
+
+	// negative slope
+	for colum in 0..4 {
+		for row in 3..6 {
+			if board.tiles[colum][row] == board.tiles[colum + 1][row - 1]
+				&& board.tiles[colum][row] == board.tiles[colum + 2][row - 2]
+				&& board.tiles[colum][row] == board.tiles[colum + 3][row - 3]
+				&& board.tiles[colum][row] != Tile::Empty
+			{
+				return true;
+			}
+		}
+	}
+
 	false
 }
 
